@@ -47,8 +47,6 @@ _sTeclas ourButton[NUMBUTT];
 //                0001 ,  0010,  0100,  1000
 uint16_t mask[]={0x0001,0x0002,0x0004,0x0008};
 
-uint16_t botones;
-
 /**
  * @brief Enumeración de la MEF para decodificar el protocolo
  * 
@@ -218,6 +216,13 @@ Timer miTimer; //!< Timer general
 
 Ticker timerGeneral;
 
+typedef struct{
+    uint8_t numButton;
+    uint8_t flanco;
+    uint32_t timerRead;
+}_sSendBotones;
+_sSendBotones botones;
+
 int main()
 {
     int hearbeatTime=0;
@@ -290,19 +295,21 @@ void actuallizaMef(uint8_t indice){
             switch (indice)
             {
             case 0:
-                botones=0x0001;
+                botones.numButton=0x01;
                 break;
             case 1:
-                botones=0x0002;
+                botones.numButton=0x02;
                 break;
             case 2:
-                botones=0x0004;
+                botones.numButton=0x04;
                 break;
             case 3:
-                botones=0x0008;
+                botones.numButton=0x08;
                 break;
             }
-            encodeData(GET_BOTONES);
+            botones.flanco=BUTTON_FALLING;
+            botones.timerRead=miTimer.read_ms();
+            encodeData(CHANGE_BOTONES);
         }
         else{
             ourButton[indice].estado=BUTTON_UP;
@@ -314,8 +321,11 @@ void actuallizaMef(uint8_t indice){
             ourButton[indice].estado=BUTTON_UP;
             //Flanco de Subida
             ourButton[indice].timeDiff=miTimer.read_ms()-ourButton[indice].timeDown;
-            botones=0x00;
-            encodeData(GET_BOTONES);
+
+            botones.numButton=0x00;
+            botones.flanco=BUTTON_RISING;
+            botones.timerRead=miTimer.read_ms();
+            encodeData(CHANGE_BOTONES);
             togleLed(indice);
         }else{
             ourButton[indice].estado=BUTTON_DOWN;
@@ -452,12 +462,21 @@ void encodeData(uint8_t id){
     auxBuffTx[indiceAux++]=':';
 
     switch (id) {
-        case GET_BOTONES:
-            auxBuffTx[indiceAux++]=GET_BOTONES;
-            myWord.ui16[0]=botones;
+        case CHANGE_BOTONES:
+            auxBuffTx[indiceAux++]=CHANGE_BOTONES;
+            // myWord.ui16[0]=botones;
+            // auxBuffTx[indiceAux++]=myWord.ui8[0];
+            // auxBuffTx[indiceAux++]=myWord.ui8[1];
+            auxBuffTx[indiceAux++]=botones.numButton;
+            auxBuffTx[indiceAux++]=botones.flanco;
+
+            myWord.ui32 = botones.timerRead;
             auxBuffTx[indiceAux++]=myWord.ui8[0];
             auxBuffTx[indiceAux++]=myWord.ui8[1];
-            auxBuffTx[NBYTES]=0x04;
+            auxBuffTx[indiceAux++]=myWord.ui8[2];
+            auxBuffTx[indiceAux++]=myWord.ui8[3];
+                        
+            auxBuffTx[NBYTES]=0x08;
             break;
         default:
             auxBuffTx[indiceAux++]=0xDD;
