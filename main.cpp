@@ -167,7 +167,7 @@ void togleLed(uint8_t indice);
  * 
  * @param mask Se envian las posiciones de los leds que se quieren encender 
  */
-void manejadorLed(uint8_t mask);
+void manejadorLed(void);
 /**
  * @brief Función que se llama en la interrupción de recepción de datos
  * Cuando se llama la fucnión se leen todos los datos que llagaron.
@@ -222,6 +222,13 @@ typedef struct{
     uint32_t timerRead;
 }_sSendBotones;
 _sSendBotones botones;
+
+typedef struct {
+    uint8_t indice;
+    uint8_t estado;
+}_sLed;
+_sLed led;
+
 
 int main()
 {
@@ -349,34 +356,67 @@ void togleLed(uint8_t indice){
     leds = ledsAux ;
 }
 
-void manejadorLed(uint8_t mask){
-    uint16_t auxled=0, setLeds=0;
-    auxled|=1<<3;
-    if(auxled & mask)
-        setLeds |= 1 <<3;
-    else
-        setLeds &= ~(1<<3);
-    auxled=0;
-    auxled|=1<<2;
-    if(auxled & mask)
-        setLeds |= 1 <<2;
-    else
-        setLeds &= ~(1<<2);
-    auxled=0;
-    auxled|=1<<1;
-    if(auxled & mask)
-        setLeds |= 1 <<1;
-    else
-        setLeds &= ~(1<<1);
-    auxled=0;
-    auxled|=1<<0;
-    if(auxled & mask)
-        setLeds |= 1 <<0;
-    else
-        setLeds &= ~(1<<0);
+void manejadorLed(void){
 
-    leds=setLeds;
+    // leds = leds & ~mask[indice];
+    switch (led.estado)
+    {
+    case 0x01:
+        leds = leds & ~mask[led.indice];
+        break;
+    
+    case 0x00:
+        leds = leds | mask[led.indice];
+        break;
+    }
+
+    // if (myWord.ui8[1] == 0x01)
+    // {
+    //     switch (myWord.ui8[0])
+    //     {
+    //     case 0x01:
+    //         auxleds |= 0x01;
+    //         break;
+    //     case 0x02:
+    //         auxleds |= 0x02;
+    //         break;
+    //     case 0x04:
+    //         auxleds |= 0x04;
+    //         break;
+    //     case 0x08:
+    //         auxleds |= 0x08;
+    //         break;
+    //     }
+    // }
+    
 }
+// void manejadorLed(uint8_t mask){
+//     uint16_t auxled=0, setLeds=0;
+//     auxled|=1<<3;
+//     if(auxled & mask)
+//         setLeds |= 1 <<3;
+//     else
+//         setLeds &= ~(1<<3);
+//     auxled=0;
+//     auxled|=1<<2;
+//     if(auxled & mask)
+//         setLeds |= 1 <<2;
+//     else
+//         setLeds &= ~(1<<2);
+//     auxled=0;
+//     auxled|=1<<1;
+//     if(auxled & mask)
+//         setLeds |= 1 <<1;
+//     else
+//         setLeds &= ~(1<<1);
+//     auxled=0;
+//     auxled|=1<<0;
+//     if(auxled & mask)
+//         setLeds |= 1 <<0;
+//     else
+//         setLeds &= ~(1<<0);
+//     leds=setLeds;
+// }
 
 void decodeProtocol(void)
 {
@@ -516,17 +556,22 @@ void decodeData(void)
             auxBuffTx[NBYTES]=0x04;
             break;
         case SET_LEDS:
+            led.indice = datosComProtocol.payload[2];
+            led.estado = datosComProtocol.payload[3];
+            manejadorLed();
+
             auxBuffTx[indiceAux++]=SET_LEDS;
-            myWord.ui8[0]=datosComProtocol.payload[2];
-            myWord.ui8[1]=datosComProtocol.payload[3];
-            auxBuffTx[NBYTES]=0x02;
-            manejadorLed(myWord.ui16[0]);
+            myWord.ui16[0]=leds;
+            auxBuffTx[indiceAux++]=myWord.ui8[0];
+            auxBuffTx[indiceAux++]=myWord.ui8[1];
+            auxBuffTx[NBYTES]=0x04;
             break;
-        case 3: //cambiar por el nombre del comando que se quiera agregar
-            break;
-        case 4: //cambiar por el nombre del comando que se quiera agregar
-            break;
-        case 5://cambiar por el nombre del comando que se quiera agregar
+        case GET_BOTONES: 
+            auxBuffTx[indiceAux++]=GET_BOTONES;
+            myWord.ui16[0]=buttonArray;
+            auxBuffTx[indiceAux++]=myWord.ui8[0];
+            auxBuffTx[indiceAux++]=myWord.ui8[1];
+            auxBuffTx[NBYTES]=0x04;
             break;
 
         default:
