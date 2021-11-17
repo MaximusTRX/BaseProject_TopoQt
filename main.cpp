@@ -320,7 +320,6 @@ void actuallizaMef(uint8_t indice){
         }
         else{
             ourButton[indice].estado=BUTTON_UP;
-            
         }
     break;
     case BUTTON_RISING:
@@ -332,8 +331,10 @@ void actuallizaMef(uint8_t indice){
             botones.numButton=0x00;
             botones.flanco=BUTTON_RISING;
             botones.timerRead=miTimer.read_ms();
-            encodeData(CHANGE_BOTONES);
             togleLed(indice);
+            encodeData(CHANGE_BOTONES);
+            encodeData(GET_LEDS);
+
         }else{
             ourButton[indice].estado=BUTTON_DOWN;
         }
@@ -517,6 +518,13 @@ void encodeData(uint8_t id){
             auxBuffTx[indiceAux++]=myWord.ui8[3];
                         
             auxBuffTx[NBYTES]=0x08;
+            break;
+        case GET_LEDS:
+            auxBuffTx[indiceAux++]=GET_LEDS;
+            myWord.ui16[0]=leds;
+            auxBuffTx[indiceAux++]=myWord.ui8[0];
+            auxBuffTx[indiceAux++]=myWord.ui8[1];
+            auxBuffTx[NBYTES]=0x04;
             break;
         default:
             auxBuffTx[indiceAux++]=0xDD;
